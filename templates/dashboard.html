@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-semibold">Top Funding Rates</h2>
+    <div class="flex space-x-6 text-sm text-gray-400">
+        <div>Coinalyze: <span id="lat-coinalyze" class="text-white font-mono">0</span> ms</div>
+        <div>Bybit: <span id="lat-bybit" class="text-white font-mono">0</span> ms</div>
+        <div>Gate.io: <span id="lat-gate" class="text-white font-mono">0</span> ms</div>
+    </div>
+</div>
+
+<div class="overflow-x-auto">
+    <table class="w-full text-left border-collapse">
+        <thead class="bg-gray-800 text-sm">
+            <tr>
+                <th class="p-3 border-b border-gray-700">Symbol</th>
+                <th class="p-3 border-b border-gray-700">Bybit FR</th>
+                <th class="p-3 border-b border-gray-700">Gate FR</th>
+                <th class="p-3 border-b border-gray-700">Diff</th>
+                <th class="p-3 border-b border-gray-700">APR</th>
+                <th class="p-3 border-b border-gray-700">Spread</th>
+                <th class="p-3 border-b border-gray-700 text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody id="table-body" class="text-sm">
+            <tr><td colspan="7" class="p-4 text-center text-gray-500">Loading data...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function fetchData() {
+        try {
+            const res = await fetch("/api/dashboard");
+            const json = await res.json();
+            
+            document.getElementById("lat-coinalyze").innerText = json.latency.coinalyze;
+            document.getElementById("lat-bybit").innerText = json.latency.bybit;
+            document.getElementById("lat-gate").innerText = json.latency.gateio;
+
+            const tbody = document.getElementById("table-body");
+            tbody.innerHTML = "";
+            
+            if (json.data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No data available.</td></tr>`;
+            }
+            
+            json.data.forEach(item => {
+                const diff = Math.abs(item.bybit_fr - item.gate_fr).toFixed(5);
+                const spreadText = item.spread !== 0 ? item.spread.toFixed(2) : "0.00";
+                
+                // Colors based on positive/negative
+                const bColor = item.bybit_fr > 0 ? 'text-green-400' : (item.bybit_fr < 0 ? 'text-red-400' : 'text-gray-300');
+                const gColor = item.gate_fr > 0 ? 'text-green-400' : (item.gate_fr < 0 ? 'text-red-400' : 'text-gray-300');
+                
+                const tr = document.createElement("tr");
+                tr.className = "border-b border-gray-800 hover:bg-gray-800 transition-colors";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold">${item.symbol}</td>
+                    <td class="p-3 ${bColor}">${item.bybit_fr}</td>
+                    <td class="p-3 ${gColor}">${item.gate_fr}</td>
+                    <td class="p-3 text-blue-300">${diff}</td>
+                    <td class="p-3 text-purple-300">${item.apr}%</td>
+                    <td class="p-3 font-mono ${item.spread > 0 ? 'text-green-300' : 'text-gray-300'}">${spreadText}</td>
+                    <td class="p-3 text-center space-x-2">
+                        <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="enterPosition('${item.symbol}')">Enter</button>
+                        <button class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs transition" onclick="delayPosition('${item.symbol}')">Delay</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error("Dashboard fetch error", e);
+        }
+    }
+
+    function enterPosition(symbol) { alert("Triggering instant entry for " + symbol); }
+    function delayPosition(symbol) { alert("Triggering delayed entry for " + symbol); }
+
+    fetchData();
+    setInterval(fetchData, 5000);
+</script>
+{% endblock %}

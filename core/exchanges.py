@@ -11,18 +11,18 @@ logger = logging.getLogger(__name__)
 
 class ExchangeManager:
     def __init__(self):
-        self.bybit = ccxt.bybit({
-            'apiKey': settings.bybit_api_key,
-            'secret': settings.bybit_secret,
-            'enableRateLimit': False,
-            'options': {'defaultType': 'swap'}
-        })
-        self.gateio = ccxt.gateio({
-            'apiKey': settings.gate_api_key,
-            'secret': settings.gate_secret,
-            'enableRateLimit': False,
-            'options': {'defaultType': 'swap'}
-        })
+        bybit_opts = {'enableRateLimit': False, 'options': {'defaultType': 'swap'}}
+        if settings.bybit_api_key:
+            bybit_opts['apiKey'] = settings.bybit_api_key
+            bybit_opts['secret'] = settings.bybit_secret
+        self.bybit = ccxt.bybit(bybit_opts)
+
+        gateio_opts = {'enableRateLimit': False, 'options': {'defaultType': 'swap'}}
+        if settings.gate_api_key:
+            gateio_opts['apiKey'] = settings.gate_api_key
+            gateio_opts['secret'] = settings.gate_secret
+        self.gateio = ccxt.gateio(gateio_opts)
+
         self.last_prices = {'bybit': {}, 'gateio': {}}
         self.last_funding_rates = {'bybit': {}, 'gateio': {}}
         self.latency = {'bybit': 0, 'gateio': 0}
@@ -76,17 +76,16 @@ class ExchangeManager:
 
     async def reinit(self):
         await self.close_connections()
-        self.bybit = ccxt.bybit({
-            'apiKey': settings.bybit_api_key,
-            'secret': settings.bybit_secret,
-            'enableRateLimit': False,
-            'options': {'defaultType': 'swap'}
-        })
-        self.gateio = ccxt.gateio({
-            'apiKey': settings.gate_api_key,
-            'secret': settings.gate_secret,
-            'enableRateLimit': False,
-            'options': {'defaultType': 'swap'}
-        })
+        bybit_opts = {'enableRateLimit': False, 'options': {'defaultType': 'swap'}}
+        if settings.bybit_api_key:
+            bybit_opts['apiKey'] = settings.bybit_api_key
+            bybit_opts['secret'] = settings.bybit_secret
+        self.bybit = ccxt.bybit(bybit_opts)
+
+        gateio_opts = {'enableRateLimit': False, 'options': {'defaultType': 'swap'}}
+        if settings.gate_api_key:
+            gateio_opts['apiKey'] = settings.gate_api_key
+            gateio_opts['secret'] = settings.gate_secret
+        self.gateio = ccxt.gateio(gateio_opts)
 
 exchange_manager = ExchangeManager()

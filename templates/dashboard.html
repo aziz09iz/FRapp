@@ -4,7 +4,6 @@
 <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-semibold">Top Funding Rates</h2>
     <div class="flex space-x-6 text-sm text-gray-400">
-        <div>Coinalyze: <span id="lat-coinalyze" class="text-white font-mono">0</span> ms</div>
         <div>Bybit: <span id="lat-bybit" class="text-white font-mono">0</span> ms</div>
         <div>Gate.io: <span id="lat-gate" class="text-white font-mono">0</span> ms</div>
     </div>
@@ -35,7 +34,6 @@
             const res = await fetch("/api/dashboard");
             const json = await res.json();
             
-            document.getElementById("lat-coinalyze").innerText = json.latency.coinalyze;
             document.getElementById("lat-bybit").innerText = json.latency.bybit;
             document.getElementById("lat-gate").innerText = json.latency.gateio;
 

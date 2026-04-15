@@ -53,3 +53,27 @@ async def get_dashboard():
 @router.get("/portfolio")
 async def get_portfolio():
     return {"positions": []}
+
+from pydantic import BaseModel
+from config import update_env, settings
+
+class SettingsUpdate(BaseModel):
+    bybit_api_key: str
+    bybit_secret: str
+    gate_api_key: str
+    gate_secret: str
+
+@router.get("/settings")
+async def api_get_settings():
+    return {
+        "bybit_api_key": settings.bybit_api_key,
+        "bybit_secret": settings.bybit_secret,
+        "gate_api_key": settings.gate_api_key,
+        "gate_secret": settings.gate_secret
+    }
+
+@router.post("/settings")
+async def api_post_settings(data: SettingsUpdate):
+    update_env(data.model_dump())
+    await exchange_manager.reinit()
+    return {"status": "ok", "message": "Settings saved to .env"}

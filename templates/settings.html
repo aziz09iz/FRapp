@@ -3,27 +3,75 @@
 {% block content %}
 <h2 class="text-2xl font-semibold mb-6">API Settings</h2>
 
-<form class="max-w-xl mx-auto bg-gray-800 p-6 rounded border border-gray-700" onsubmit="event.preventDefault(); alert('Settings saved!');">
+<form id="settings-form" class="max-w-xl mx-auto bg-gray-800 p-6 rounded border border-gray-700" onsubmit="saveSettings(event)">
+    <div id="alert-msg" class="hidden mb-4 p-3 rounded text-sm font-bold"></div>
     <div class="mb-4">
         <label class="block text-sm font-bold mb-2">Bybit API Key</label>
-        <input type="text" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Bybit API Key">
+        <input id="bybit-key" type="text" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Bybit API Key">
     </div>
     <div class="mb-6">
         <label class="block text-sm font-bold mb-2">Bybit Secret</label>
-        <input type="password" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Bybit Secret">
+        <input id="bybit-secret" type="password" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Bybit Secret">
     </div>
 
     <div class="mb-4 text-gray-500 border-b border-gray-700"></div>
 
     <div class="mb-4">
         <label class="block text-sm font-bold mb-2">Gate.io API Key</label>
-        <input type="text" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Gate.io API Key">
+        <input id="gate-key" type="text" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Gate.io API Key">
     </div>
     <div class="mb-6">
         <label class="block text-sm font-bold mb-2">Gate.io Secret</label>
-        <input type="password" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Gate.io Secret">
+        <input id="gate-secret" type="password" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Gate.io Secret">
     </div>
 
     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition">Save Settings</button>
 </form>
+
+<script>
+    async function loadSettings() {
+        try {
+            const res = await fetch("/api/settings");
+            const data = await res.json();
+            document.getElementById('bybit-key').value = data.bybit_api_key || "";
+            document.getElementById('bybit-secret').value = data.bybit_secret || "";
+            document.getElementById('gate-key').value = data.gate_api_key || "";
+            document.getElementById('gate-secret').value = data.gate_secret || "";
+        } catch (e) {
+            console.error("Failed to load settings", e);
+        }
+    }
+
+    async function saveSettings(e) {
+        e.preventDefault();
+        const payload = {
+            bybit_api_key: document.getElementById('bybit-key').value,
+            bybit_secret: document.getElementById('bybit-secret').value,
+            gate_api_key: document.getElementById('gate-key').value,
+            gate_secret: document.getElementById('gate-secret').value
+        };
+
+        const alertBox = document.getElementById('alert-msg');
+        try {
+            const res = await fetch("/api/settings", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            
+            if (data.status === "ok") {
+                alertBox.className = "mb-4 p-3 rounded text-sm font-bold bg-green-900 text-green-200 block";
+                alertBox.innerText = data.message;
+                setTimeout(() => alertBox.classList.add('hidden'), 3000);
+            }
+        } catch (e) {
+            alertBox.className = "mb-4 p-3 rounded text-sm font-bold bg-red-900 text-red-200 block";
+            alertBox.innerText = "Error saving settings.";
+        }
+    }
+
+    // Load on start
+    window.addEventListener('DOMContentLoaded', loadSettings);
+</script>
 {% endblock %}

@@ -1,4 +1,5 @@
 import os
+import dotenv
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -14,3 +15,12 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 settings = Settings()
+
+def update_env(updates: dict):
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+    if not os.path.exists(env_path):
+        with open(env_path, 'w') as f:
+            pass
+    for k, v in updates.items():
+        dotenv.set_key(env_path, k.upper(), str(v))
+        setattr(settings, k.lower(), v)

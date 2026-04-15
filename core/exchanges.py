@@ -74,4 +74,19 @@ class ExchangeManager:
         await self.bybit.close()
         await self.gateio.close()
 
+    async def reinit(self):
+        await self.close_connections()
+        self.bybit = ccxt.bybit({
+            'apiKey': settings.bybit_api_key,
+            'secret': settings.bybit_secret,
+            'enableRateLimit': False,
+            'options': {'defaultType': 'swap'}
+        })
+        self.gateio = ccxt.gateio({
+            'apiKey': settings.gate_api_key,
+            'secret': settings.gate_secret,
+            'enableRateLimit': False,
+            'options': {'defaultType': 'swap'}
+        })
+
 exchange_manager = ExchangeManager()

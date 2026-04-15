@@ -16,33 +16,64 @@ class CoinalyzeClient:
         self.client = httpx.AsyncClient(timeout=10.0)
         self.top_funding_rates = []
         self.latency = 0
+        
+        self.base_assets = [
+            "BTC", "ETH", "SOL", "XRP", "DOGE", 
+            "ADA", "AVAX", "LINK", "MATIC", "DOT", 
+            "BCH", "LTC", "NEAR", "STX", "AAVE"
+        ]
+        symbols = []
+        for base in self.base_assets:
+            symbols.append(f"{base}USDT.6") # Bybit USDT perp
+            symbols.append(f"{base}_USDT.Y") # Gate USDT perp
+        self.symbols_param = ",".join(symbols)
 
     async def fetch_and_compute(self):
         start = asyncio.get_event_loop().time()
         try:
-            # Note: The true Coinalyze API for funding rate requires specific symbols or markets.
-            # As a generalization for MVP without specific symbols passed, we might mock fetching all 
-            # Or if /funding-rate supports getting all markets, we process it.
-            # Since standard Coinalyze /funding-rate might need specific pairs, we will return some mock data 
-            # if we get an error, just to show how the UI works based on the project spec.
-            res = await self.client.get(f"{self.base_url}/funding-rate", headers={"api_key": self.api_key})
+            res = await self.client.get(
+                f"{self.base_url}/funding-rate", 
+                params={"symbols": self.symbols_param},
+                headers={"api_key": self.api_key}
+            )
             res.raise_for_status()
             data = res.json()
-            # Assuming data is a list of objects: [{"symbol": "BTCUSD_PERP.A", "value": 0.0001, ...}, ...]
             self._process_data(data)
         except Exception as e:
-            logger.warning(f"Coinalyze fetch warning (mocking data for demonstration): {e}")
-            self._mock_data()
+            logger.error(f"Coinalyze fetch error: {e}")
+            if not self.top_funding_rates:
+                self._mock_data()
         finally:
             self.latency = int((asyncio.get_event_loop().time() - start) * 1000)
 
     def _process_data(self, data):
-        # Custom logic to map Coinalyze symbols to standard Bybit/Gate format
-        # and match Bybit vs Gate pairs. For now using mock logic to populate UI.
-        pass
+        rates = {}
+        for item in data:
+            sym = item.get("symbol", "")
+            val = float(item.get("value", 0))
+
+            if sym.endswith(".6"):
+                base = sym.replace("USDT.6", "")
+                if base not in rates:
+                    rates[base] = {"symbol": f"{base}USDT", "bybit_fr": 0.0, "gate_fr": 0.0, "interval": 8, "apr": 0.0}
+                rates[base]["bybit_fr"] = val
+            elif sym.endswith(".Y"):
+                base = sym.replace("_USDT.Y", "")
+                if base not in rates:
+                    rates[base] = {"symbol": f"{base}USDT", "bybit_fr": 0.0, "gate_fr": 0.0, "interval": 8, "apr": 0.0}
+                rates[base]["gate_fr"] = val
+
+        results = []
+        for r in rates.values():
+            diff = abs(r["bybit_fr"] - r["gate_fr"])
+            r["apr"] = round(diff * 3 * 365 * 100, 2)
+            results.append(r)
+        
+        results.sort(key=lambda x: x["apr"], reverse=True)
+        # Berikan top 5 rate dengan selisih terbesar
+        self.top_funding_rates = results[:5]
 
     def _mock_data(self):
-        # Providing standard mock data for the UI to display 5 items
         self.top_funding_rates = [
             {"symbol": "BTCUSDT", "bybit_fr": 0.0001, "gate_fr": -0.00005, "interval": 8, "apr": 54.75},
             {"symbol": "ETHUSDT", "bybit_fr": 0.00008, "gate_fr": -0.00002, "interval": 8, "apr": 32.85},

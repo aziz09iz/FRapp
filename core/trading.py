@@ -11,10 +11,10 @@ async def execute_order(exchange_name, symbol, side, type="market", amount=1):
     start = asyncio.get_event_loop().time()
     try:
         if exchange_name == "bybit":
-            # order = await exchange_manager.bybit.create_order(symbol, type, side, amount)
+            # order = await exchange_manager.bybit_private.create_order(symbol, type, side, amount)
             pass
         elif exchange_name == "gateio":
-            # order = await exchange_manager.gateio.create_order(symbol, type, side, amount)
+            # order = await exchange_manager.gateio_private.create_order(symbol, type, side, amount)
             pass
         await asyncio.sleep(0.1) # Simulate network time for mockup
     except Exception as e:

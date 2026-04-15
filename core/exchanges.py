@@ -37,8 +37,9 @@ class ExchangeManager:
         self.gateio_private = ccxt.gateio(gateio_opts)
 
     def _normalize_symbol(self, symbol):
-        # Keep only alphanumeric chars (e.g. BTCUSDT)
-        return ''.join(e for e in symbol if e.isalnum()).upper()
+        # e.g. BTC/USDT:USDT -> BTC/USDT -> BTCUSDT
+        base_quote = symbol.split(':')[0]
+        return base_quote.replace('/', '').upper()
 
     async def fetch_prices(self):
         async def fetch_ex(exchange, name):

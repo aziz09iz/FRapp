@@ -45,8 +45,11 @@
             }
             
             json.data.forEach(item => {
-                const diff = Math.abs(item.bybit_fr - item.gate_fr).toFixed(5);
-                const spreadText = item.spread !== 0 ? item.spread.toFixed(2) : "0.00";
+                const bFR = (item.bybit_fr * 100).toFixed(4) + '%';
+                const gFR = (item.gate_fr * 100).toFixed(4) + '%';
+                const diffPerc = (Math.abs(item.bybit_fr - item.gate_fr) * 100).toFixed(4) + '%';
+                
+                const spreadText = item.spread !== 0 ? item.spread.toFixed(6) : "0.000000";
                 
                 // Colors based on positive/negative
                 const bColor = item.bybit_fr > 0 ? 'text-green-400' : (item.bybit_fr < 0 ? 'text-red-400' : 'text-gray-300');
@@ -56,11 +59,11 @@
                 tr.className = "border-b border-gray-800 hover:bg-gray-800 transition-colors";
                 tr.innerHTML = `
                     <td class="p-3 font-bold">${item.symbol}</td>
-                    <td class="p-3 ${bColor}">${item.bybit_fr}</td>
-                    <td class="p-3 ${gColor}">${item.gate_fr}</td>
-                    <td class="p-3 text-blue-300">${diff}</td>
-                    <td class="p-3 text-purple-300">${item.apr}%</td>
-                    <td class="p-3 font-mono ${item.spread > 0 ? 'text-green-300' : 'text-gray-300'}">${spreadText}</td>
+                    <td class="p-3 ${bColor}">${bFR}</td>
+                    <td class="p-3 ${gColor}">${gFR}</td>
+                    <td class="p-3 text-blue-300">${diffPerc}</td>
+                    <td class="p-3 text-purple-300">${item.apr.toFixed(2)}%</td>
+                    <td class="p-3 font-mono ${item.spread > 0 ? 'text-green-300' : (item.spread < 0 ? 'text-red-300' : 'text-gray-300')}">${spreadText}</td>
                     <td class="p-3 text-center space-x-2">
                         <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="enterPosition('${item.symbol}')">Enter</button>
                         <button class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs transition" onclick="delayPosition('${item.symbol}')">Delay</button>

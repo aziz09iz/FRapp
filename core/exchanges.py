@@ -24,6 +24,7 @@ class ExchangeManager:
             'options': {'defaultType': 'swap'}
         })
         self.last_prices = {'bybit': {}, 'gateio': {}}
+        self.last_funding_rates = {'bybit': {}, 'gateio': {}}
         self.latency = {'bybit': 0, 'gateio': 0}
 
     def _normalize_symbol(self, symbol):
@@ -35,10 +36,24 @@ class ExchangeManager:
             start = asyncio.get_event_loop().time()
             try:
                 tickers = await exchange.fetch_tickers()
-                self.last_prices[name] = {
-                    self._normalize_symbol(k): v['last']
-                    for k, v in tickers.items() if v.get('last')
-                }
+                self.last_prices[name] = {}
+                self.last_funding_rates[name] = {}
+                for k, v in tickers.items():
+                    if not v.get('last'):
+                        continue
+                    sym = self._normalize_symbol(k)
+                    self.last_prices[name][sym] = float(v['last'])
+                    
+                    # Extract funding rate from info object avoiding extra api limits
+                    fr = 0.0
+                    if 'info' in v:
+                        if name == 'bybit':
+                            fr_raw = v['info'].get('fundingRate')
+                            fr = float(fr_raw) if fr_raw else 0.0
+                        elif name == 'gateio':
+                            fr_raw = v['info'].get('funding_rate')
+                            fr = float(fr_raw) if fr_raw else 0.0
+                    self.last_funding_rates[name][sym] = fr
             except Exception as e:
                 logger.error(f"{name} fetch_tickers error: {e}")
             finally:
@@ -51,6 +66,9 @@ class ExchangeManager:
 
     def get_price(self, exchange_name, symbol_normalized):
         return self.last_prices.get(exchange_name, {}).get(symbol_normalized)
+        
+    def get_funding_rate(self, exchange_name, symbol_normalized):
+        return self.last_funding_rates.get(exchange_name, {}).get(symbol_normalized)
 
     async def close_connections(self):
         await self.bybit.close()

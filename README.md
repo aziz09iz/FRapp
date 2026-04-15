@@ -3,7 +3,7 @@
 This is a production-oriented web application designed to identify funding rate opportunities and arbitrage spreads between Bybit and Gate.io perpetual futures. The application uses a Fast Python + FastAPI backend integrated with CCXT and an asynchronous SQLite datastore to ensure optimal performance and minimal API latency. 
 
 ## Key Features
-- **Top 5 Funding Rates Dashboard:** Powered by Coinalyze.
+- **Top 5 Funding Rates Dashboard:** Powered natively by the public CCXT payloads from Bybit and Gate (polls every 60 seconds to avoid limit bans).
 - **Asynchronous Trading Logic:** Real-time dual-exchange REST interactions avoiding strict API limits utilizing one master payload.
 - **Minimal Clean UI:** Designed with HTML/TailwindCSS to reload components in JS natively without heavy JS framework bloats.
 - **Multiple Execution Modes:** Instant vs Delayed execution.
@@ -16,7 +16,7 @@ This is a production-oriented web application designed to identify funding rate 
 ├── config.py              # Environment configuration loading via Pydantic
 ├── requirements.txt       # Python dependencies
 ├── db/                    # SQLite SQLAlchemy integration (database.py, models.py)
-├── core/                  # Core modules (trading, scheduler, coinalyze wrapper, ccxt wrapper)
+├── core/                  # Core modules (trading, scheduler, ccxt wrapper)
 ├── api/                   # FastAPI Endpoints (routes.py, views.py)
 └── templates/             # Jinja2 and Tailwind HTML templates
 ```
@@ -46,7 +46,6 @@ BYBIT_API_KEY=YOUR_BYBIT_KEY
 BYBIT_SECRET=YOUR_BYBIT_SECRET
 GATE_API_KEY=YOUR_GATE_KEY
 GATE_SECRET=YOUR_GATE_SECRET
-COINALYZE_API_KEY=5ac7435e-8aa0-4f1a-abb8-daa96820cb51
 ```
 
 ### 5. Launch the Server
@@ -56,7 +55,4 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 6. View the App
-Navigate to [http://localhost:8000](http://localhost:8000) in your web browser. 
-
----
-**Note on Coinalyze:** The application currently contains mock definitions for demonstration purposes inside `core/coinalyze.py` so you can verify the logic before connecting a true live stream API. Remove the mock execution hook once you're ready for deep production trading.
+Navigate to [http://localhost:8000](http://localhost:8000) in your web browser.

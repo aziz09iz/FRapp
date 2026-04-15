@@ -6,7 +6,6 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import settings
 from core.exchanges import exchange_manager
-from core.coinalyze import coinalyze_client
 from core.trading import check_pending_orders
 
 logger = logging.getLogger(__name__)
@@ -20,8 +19,7 @@ class Scheduler:
         while self.running:
             try:
                 await asyncio.gather(
-                    exchange_manager.fetch_prices(),
-                    coinalyze_client.fetch_and_compute()
+                    exchange_manager.fetch_prices()
                 )
                 await check_pending_orders()
             except Exception as e:
@@ -38,6 +36,5 @@ class Scheduler:
         if self.task:
             self.task.cancel()
         await exchange_manager.close_connections()
-        await coinalyze_client.close()
 
 scheduler = Scheduler()

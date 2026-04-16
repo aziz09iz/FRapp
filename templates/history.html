@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-semibold text-white">Trade History</h2>
+</div>
+
+<div class="overflow-x-auto bg-[#131722] rounded-2xl shadow-lg border border-gray-800">
+    <table class="w-full text-left border-collapse">
+        <thead class="bg-[#1e222d] border-b border-gray-800 text-xs text-gray-400 font-medium">
+            <tr>
+                <th class="p-4">Symbol</th>
+                <th class="p-4">Side Setup</th>
+                <th class="p-4">Size</th>
+                <th class="p-4">Entry (L vs S)</th>
+                <th class="p-4">Realized PnL</th>
+                <th class="p-4">Funding Harvested</th>
+                <th class="p-4 text-right">Closed At</th>
+            </tr>
+        </thead>
+        <tbody id="history-body" class="text-sm text-gray-200">
+            <tr><td colspan="7" class="p-6 text-center text-gray-500">Loading history...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    async function fetchHistory() {
+        try {
+            const res = await fetch("/api/history");
+            const data = await res.json();
+            const tbody = document.getElementById("history-body");
+            tbody.innerHTML = "";
+            
+            if (data.history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-600">No trade history available.</td></tr>`;
+                return;
+            }
+            
+            data.history.forEach(p => {
+                 const pnlColor = p.realized_pnl >= 0 ? 'text-green-400' : 'text-red-400';
+                 const funColor = p.funding_accrued >= 0 ? 'text-green-400' : 'text-red-400';
+                 
+                 const dateStr = p.closed_at ? new Date(p.closed_at + "Z").toLocaleString() : "Unknown";
+                 
+                 const tr = document.createElement('tr');
+                 tr.className = "border-b border-gray-800 hover:bg-[#1a1e29] transition-colors";
+                 tr.innerHTML = `
+                    <td class="p-4 font-bold text-blue-300">${p.symbol}</td>
+                    <td class="p-4 text-xs tracking-wider uppercase"><span class="text-green-400">${p.long_exchange}</span> / <span class="text-red-400">${p.short_exchange}</span></td>
+                    <td class="p-4 font-mono text-gray-400">${p.qty}</td>
+                    <td class="p-4 font-mono text-gray-400">${p.entry_long.toFixed(4)} vs ${p.entry_short.toFixed(4)}</td>
+                    <td class="p-4 font-bold font-mono ${pnlColor}">${p.realized_pnl >= 0 ? '+' : ''}${p.realized_pnl.toFixed(4)}</td>
+                    <td class="p-4 font-bold font-mono ${funColor}">${p.funding_accrued >= 0 ? '+' : ''}${p.funding_accrued.toFixed(4)}</td>
+                    <td class="p-4 text-right text-xs text-gray-500">${dateStr}</td>
+                 `;
+                 tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error("History fetch failed", e);
+        }
+    }
+    fetchHistory();
+</script>
+{% endblock %}

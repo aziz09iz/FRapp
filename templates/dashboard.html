@@ -1,48 +1,63 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-semibold">Top Funding Rates</h2>
-    <div class="flex space-x-6 text-sm text-gray-400">
-        <div><span class="font-bold text-green-400">Bybit Bal:</span> $<span id="bal-bybit" class="text-white font-mono">0.00</span> | Lat: <span id="lat-bybit" class="text-white font-mono">0</span> ms</div>
-        <div><span class="font-bold text-green-400">Gate.io Bal:</span> $<span id="bal-gate" class="text-white font-mono">0.00</span> | Lat: <span id="lat-gate" class="text-white font-mono">0</span> ms</div>
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div>
+        <h2 class="text-4xl font-black text-white bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-emerald-300">Live Opportunities</h2>
+        <p class="text-sm text-gray-400 mt-1">Cross-exchange funding rate arbitrage scanner</p>
+    </div>
+    
+    <div class="flex space-x-4">
+        <div class="bg-gradient-to-br from-[#1e222d] to-[#131722] px-5 py-3 rounded-xl shadow-lg border border-gray-700/50">
+            <div class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1 flex justify-between"><span class="mr-6">Bybit Limit</span><span id="lat-bybit" class="text-indigo-400">0</span><span class="text-gray-600 text-[10px]">ms</span></div>
+            <div class="text-gray-200 font-mono text-xl"><span class="text-emerald-400">$</span><span id="bal-bybit">0.00</span></div>
+        </div>
+        <div class="bg-gradient-to-br from-[#1e222d] to-[#131722] px-5 py-3 rounded-xl shadow-lg border border-gray-700/50">
+            <div class="text-xs text-gray-500 font-bold uppercase tracking-widest mb-1 flex justify-between"><span class="mr-6">Gate.io Limit</span><span id="lat-gate" class="text-indigo-400">0</span><span class="text-gray-600 text-[10px]">ms</span></div>
+            <div class="text-gray-200 font-mono text-xl"><span class="text-emerald-400">$</span><span id="bal-gate">0.00</span></div>
+        </div>
     </div>
 </div>
 
-<div class="mb-6 p-4 bg-gray-800 rounded-lg flex flex-wrap gap-4 items-end">
+<div class="mb-8 p-6 bg-[#131722]/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-800 flex flex-wrap gap-6 items-end relative overflow-hidden">
+    <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
     <div>
-        <label class="block text-xs text-gray-400 mb-1">Trade Size (USDT)</label>
-        <input type="number" id="trade-size" value="100" class="w-32 bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Trade Size (USDT)</label>
+        <input type="number" id="trade-size" value="100" title="Ignored if Dynamic Sizing is set in Settings" class="w-32 bg-[#0b0e14] text-white px-4 py-2.5 rounded-lg border border-gray-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
     </div>
     <div>
-        <label class="block text-xs text-gray-400 mb-1">Leverage</label>
-        <input type="number" id="trade-leverage" value="10" class="w-24 bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Leverage</label>
+        <input type="number" id="trade-leverage" value="10" class="w-24 bg-[#0b0e14] text-white px-4 py-2.5 rounded-lg border border-gray-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors">
     </div>
     <div>
-        <label class="block text-xs text-gray-400 mb-1">Margin Mode</label>
-        <select id="trade-margin" class="w-28 bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <label class="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Margin Mode</label>
+        <select id="trade-margin" class="w-32 bg-[#0b0e14] text-white px-4 py-2.5 rounded-lg border border-gray-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors appearance-none">
             <option value="cross">Cross</option>
             <option value="isolated">Isolated</option>
         </select>
     </div>
+    <div class="text-xs text-indigo-400 ml-auto pb-2 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span id="auto-status">Autopilot is OFF</span>
+    </div>
 </div>
 
-<div class="overflow-x-auto">
+<div class="overflow-x-auto bg-[#131722]/80 backdrop-blur-md rounded-2xl shadow-xl border border-gray-800">
     <table class="w-full text-left border-collapse">
-        <thead class="bg-gray-800 text-sm">
+        <thead class="bg-[#1e222d] border-b border-gray-800 text-xs text-gray-400 font-medium uppercase tracking-wider">
             <tr>
-                <th class="p-3 border-b border-gray-700">Symbol</th>
-                <th class="p-3 border-b border-gray-700">Next Funding</th>
-                <th class="p-3 border-b border-gray-700">Bybit FR</th>
-                <th class="p-3 border-b border-gray-700">Gate FR</th>
-                <th class="p-3 border-b border-gray-700">Diff</th>
-                <th class="p-3 border-b border-gray-700">APR</th>
-                <th class="p-3 border-b border-gray-700">Spread</th>
-                <th class="p-3 border-b border-gray-700 text-center">Action</th>
+                <th class="p-5">Asset</th>
+                <th class="p-5">Resets In</th>
+                <th class="p-5">Bybit FR</th>
+                <th class="p-5">Gate.io FR</th>
+                <th class="p-5">Delta Δ</th>
+                <th class="p-5">APR Projected</th>
+                <th class="p-5">Price Spread</th>
+                <th class="p-5 text-right">Execute</th>
             </tr>
         </thead>
-        <tbody id="table-body" class="text-sm">
-            <tr><td colspan="8" class="p-4 text-center text-gray-500">Loading data...</td></tr>
+        <tbody id="table-body" class="text-sm text-gray-200">
+            <tr><td colspan="8" class="p-8 text-center text-gray-500">Scanning endpoints...</td></tr>
         </tbody>
     </table>
 </div>
@@ -77,6 +92,17 @@
     }
     setInterval(updateCountdowns, 1000);
 
+    async function checkSettings() {
+        try {
+            const res = await fetch("/api/settings");
+            const set = await res.json();
+            if (set.autopilot_enabled) {
+                document.getElementById('auto-status').innerText = `Autopilot ENABLED limit ${set.autopilot_min_apr}% (DynSizing: ${set.trade_size_pct}%)`;
+                document.getElementById('auto-status').className = "text-red-400 font-bold ml-auto pb-2 flex items-center gap-2 animate-pulse";
+            }
+        } catch(e) {}
+    }
+
     async function fetchData() {
         try {
             const res = await fetch("/api/dashboard");
@@ -84,14 +110,14 @@
             
             document.getElementById("lat-bybit").innerText = json.latency.bybit;
             document.getElementById("lat-gate").innerText = json.latency.gateio;
-            document.getElementById("bal-bybit").innerText = (json.balances.bybit || 0).toFixed(2);
-            document.getElementById("bal-gate").innerText = (json.balances.gateio || 0).toFixed(2);
+            document.getElementById("bal-bybit").innerText = (json.balances.bybit || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
+            document.getElementById("bal-gate").innerText = (json.balances.gateio || 0).toLocaleString(undefined, {minimumFractionDigits: 2});
 
             const tbody = document.getElementById("table-body");
             tbody.innerHTML = "";
             
             if (json.data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No data available.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-gray-500">No cross-exchange alignments found.</td></tr>`;
             }
             
             json.data.forEach(item => {
@@ -103,22 +129,34 @@
                 
                 const spreadText = item.spread !== 0 ? item.spread.toFixed(6) : "0.000000";
                 
-                const bColor = item.bybit_fr > 0 ? 'text-green-400' : (item.bybit_fr < 0 ? 'text-red-400' : 'text-gray-300');
-                const gColor = item.gate_fr > 0 ? 'text-green-400' : (item.gate_fr < 0 ? 'text-red-400' : 'text-gray-300');
+                const bColor = item.bybit_fr > 0 ? 'text-emerald-400' : (item.bybit_fr < 0 ? 'text-rose-400' : 'text-gray-400');
+                const gColor = item.gate_fr > 0 ? 'text-emerald-400' : (item.gate_fr < 0 ? 'text-rose-400' : 'text-gray-400');
+                
+                const gapBarWidth = Math.min(100, (item.apr / 10)); // Visual indicator
                 
                 const tr = document.createElement("tr");
-                tr.className = "border-b border-gray-800 hover:bg-gray-800 transition-colors";
+                tr.className = "border-b border-gray-800 hover:bg-[#1a1e29] transition-colors";
                 tr.innerHTML = `
-                    <td class="p-3 font-bold">${item.symbol}</td>
-                    <td class="p-3 text-gray-400 font-mono" id="countdown-${item.symbol}">--:--:--</td>
-                    <td class="p-3 ${bColor}">${bFR}</td>
-                    <td class="p-3 ${gColor}">${gFR}</td>
-                    <td class="p-3 text-blue-300">${diffPerc}</td>
-                    <td class="p-3 text-purple-300">${item.apr.toFixed(2)}%</td>
-                    <td class="p-3 font-mono ${item.spread > 0 ? 'text-green-300' : (item.spread < 0 ? 'text-red-300' : 'text-gray-300')}">${spreadText}</td>
-                    <td class="p-3 text-center space-x-2">
-                        <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="submitPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr}, 'instant')">Enter</button>
-                        <button class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs transition" onclick="submitPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr}, 'delay')">Delay</button>
+                    <td class="p-5 font-bold text-white flex items-center gap-2">
+                        <div class="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-xs text-blue-300 font-black">${item.symbol.charAt(0)}</div>
+                        ${item.symbol.replace('USDT', '')}<span class="text-gray-500 text-xs">USDT</span>
+                    </td>
+                    <td class="p-5 text-gray-400 font-mono tracking-widest" id="countdown-${item.symbol}">--:--:--</td>
+                    <td class="p-5 font-mono ${bColor}">${bFR}</td>
+                    <td class="p-5 font-mono ${gColor}">${gFR}</td>
+                    <td class="p-5 font-bold text-indigo-400 font-mono">${diffPerc}</td>
+                    <td class="p-5">
+                       <div class="flex items-center gap-3">
+                           <span class="font-bold text-amber-300 tracking-wider">${item.apr.toFixed(2)}%</span>
+                           <div class="w-16 h-1 bg-gray-800 rounded-full overflow-hidden hidden md:block">
+                               <div class="bg-gradient-to-r from-amber-600 to-amber-300 h-full" style="width: ${gapBarWidth}%"></div>
+                           </div>
+                       </div>
+                    </td>
+                    <td class="p-5 font-mono ${item.spread > 0 ? 'text-emerald-400' : (item.spread < 0 ? 'text-rose-400' : 'text-gray-400')}">${spreadText}</td>
+                    <td class="p-5 text-right space-x-2">
+                        <button class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 border-b-2 border-indigo-800 active:border-b-0 active:mt-0.5 rounded-lg text-xs font-bold transition-all shadow-lg shadow-indigo-900/20" onclick="submitPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr}, 'instant')">BUY</button>
+                        <button class="bg-amber-600 hover:bg-amber-500 text-white px-4 py-2 border-b-2 border-amber-800 active:border-b-0 active:mt-0.5 rounded-lg text-xs font-bold transition-all shadow-lg shadow-amber-900/20" onclick="submitPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr}, 'delay')">WAIT ≥ 0</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
@@ -163,6 +201,7 @@
         }
     }
 
+    checkSettings();
     fetchData();
     setInterval(fetchData, 5000);
 </script>

@@ -20,6 +20,8 @@ class ActivePosition(Base):
     funding_accrued = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
     active = Column(Boolean, default=True)
+    closed_at = Column(DateTime, nullable=True)
+    realized_pnl = Column(Float, default=0.0)
 
 class SettingsModel(Base):
     __tablename__ = "settings"

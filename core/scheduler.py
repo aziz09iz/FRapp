@@ -7,7 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import settings
 from config import settings
 from core.exchanges import exchange_manager
-from core.trading import check_pending_orders, check_active_positions
+from core.trading import check_pending_orders, check_active_positions, run_autopilot
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ class Scheduler:
                 )
                 await check_pending_orders()
                 await check_active_positions()
+                await run_autopilot()
             except Exception as e:
                 logger.error(f"Scheduler error in main loop: {e}")
             await asyncio.sleep(settings.poll_interval)

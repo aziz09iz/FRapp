@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     sqlite_db_url: str = "sqlite+aiosqlite:///./data.sqlite"
     poll_interval: int = 60
     auto_exit_apr_threshold: float = 10.0
+    autopilot_enabled: bool = False
+    autopilot_min_apr: float = 300.0
+    trade_size_pct: float = 0.0  # 0 means fixed usdt size is used
+    margin_alert_threshold: float = 80.0
     
     class Config:
         env_file = ".env"

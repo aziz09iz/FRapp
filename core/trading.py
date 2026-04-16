@@ -91,6 +91,12 @@ async def check_active_positions():
                 threshold = getattr(settings, 'auto_exit_apr_threshold', 10.0)
                 if apr < threshold:
                     pos.active = False
+                    # calculate realized PnL
+                    from datetime import datetime
+                    pos.closed_at = datetime.utcnow()
+                    pnl_long = (pb - pos.entry_price_long) * pos.qty if pos.entry_price_long else 0
+                    pnl_short = (pos.entry_price_short - pg) * pos.qty if pos.entry_price_short else 0
+                    pos.realized_pnl = pnl_long + pnl_short
                     await session.commit()
                     
                     msg = f"🚨 <b>Auto-Exit Triggered</b> for {pos.symbol}.\nAPR dropped to {apr:.2f}% (Below {threshold}%)."
@@ -101,6 +107,84 @@ async def check_active_positions():
                     asyncio.create_task(execute_order(pos.short_exchange, pos.symbol, "buy", amount=pos.qty))
     except Exception as e:
         logger.error(f"Error checking active positions: {e}")
+
+async def run_autopilot():
+    if not getattr(settings, 'autopilot_enabled', False):
+        return
+        
+    try:
+        from core.exchanges import exchange_manager
+        
+        # Scrape all common
+        bybit_symbols = set(exchange_manager.last_prices.get('bybit', {}).keys())
+        gateio_symbols = set(exchange_manager.last_prices.get('gateio', {}).keys())
+        common_symbols = bybit_symbols.intersection(gateio_symbols)
+        
+        min_apr = getattr(settings, 'autopilot_min_apr', 300.0)
+        
+        best_sym = None
+        best_apr = 0
+        best_long = ""
+        best_short = ""
+        
+        from sqlalchemy.future import select
+        async with AsyncSessionLocal() as session:
+            # Get existing active symbols
+            result = await session.execute(select(ActivePosition.symbol).where(ActivePosition.active == True))
+            active_symbols = set(result.scalars().all())
+            
+            for symbol in common_symbols:
+                if symbol in active_symbols:
+                    continue
+                
+                pb = exchange_manager.get_price('bybit', symbol) or 0
+                pg = exchange_manager.get_price('gateio', symbol) or 0
+                fb = exchange_manager.get_funding_rate('bybit', symbol) or 0
+                fg = exchange_manager.get_funding_rate('gateio', symbol) or 0
+                
+                if not pb or not pg or (fb == 0 and fg == 0):
+                    continue
+                    
+                diff = abs(fb - fg)
+                apr = diff * 3 * 365 * 100
+                
+                if apr >= min_apr:
+                    # check spread to be non negative
+                    longEx = "gateio" if fb > fg else "bybit"
+                    shortEx = "bybit" if fb > fg else "gateio"
+                    pl = pg if longEx == "gateio" else pb
+                    ps = pb if shortEx == "bybit" else pg
+                    
+                    if (ps - pl) >= 0:
+                        if apr > best_apr:
+                            best_apr = apr
+                            best_sym = symbol
+                            best_long = longEx
+                            best_short = shortEx
+                            
+            if best_sym:
+                logger.info(f"Autopilot triggered for {best_sym} with {best_apr}% APR")
+                
+                size_pct = getattr(settings, 'trade_size_pct', 0.0)
+                amount = 100.0 # Default fallback
+                if size_pct > 0:
+                    b1 = exchange_manager.balances.get('bybit', 0)
+                    b2 = exchange_manager.balances.get('gateio', 0)
+                    min_bal = min(b1, b2)
+                    if min_bal > 10:
+                        amount = min_bal * (size_pct / 100.0)
+                        
+                await process_instant_entry(
+                    symbol=best_sym,
+                    long_exchange=best_long,
+                    short_exchange=best_short,
+                    size_usdt=amount,
+                    leverage=10,
+                    margin_mode="cross"
+                )
+                
+    except Exception as e:
+        logger.error(f"Autopilot error: {e}")
 
 async def process_instant_entry(symbol, long_exchange, short_exchange, size_usdt: float = 100.0, leverage: int = 10, margin_mode: str = "cross"):
     # Mockup of fetching price to convert USDT size to Asset Size

@@ -3,11 +3,14 @@
 This is a production-oriented web application designed to identify funding rate opportunities and arbitrage spreads between Bybit and Gate.io perpetual futures. The application uses a Fast Python + FastAPI backend integrated with CCXT and an asynchronous SQLite datastore to ensure optimal performance and minimal API latency. 
 
 ## Key Features
-- **Top 5 Funding Rates Dashboard:** Powered natively by the public CCXT payloads from Bybit and Gate (polls every 60 seconds to avoid limit bans).
-- **Dynamic Countdown Timer:** Real-time javascript based countdown synced with exchange settlement times.
-- **Simultaneous Arbitrage Execution:** Built-in form to set global Margin, Size and Leverage and execute opposing hedges simultaneously on two exchanges.
-- **Asynchronous Trading Logic:** Real-time dual-exchange REST interactions avoiding strict API limits utilizing one master payload.
-- **Minimal Clean UI:** Designed with HTML/TailwindCSS to reload components in JS natively without heavy JS framework bloats.
+- **Top 5 Funding Rates Dashboard:** Powered natively by the public CCXT payloads from Bybit and Gate (polls every 60 seconds to avoid limit bans without sacrificing speed).
+- **Full Autopilot Automation [NEW]:** Configurable background scanner that directly dispatches hedge operations asynchronously when the specified APR bounds and Spread conditions are satisfied, 100% hands-free.
+- **Dynamic Portfolio & Auto-Exit [NEW]:** Live monitoring of hedge states with unrealized PnL readouts. Automatically dispatches emergency Close limit orders when the APR dips below a threshold limits to preserve overall profitability.
+- **Telegram Notification Bot [NEW]:** Configurable bot listener to ping your phone immediately upon order executions and danger-zone auto-exit triggers.
+- **Realized Trade Ledger (History) [NEW]:** A comprehensive ledger view recording exact long vs short entry costs, harvested funding fees, and final realized PnL.
+- **Balance-Aware Dynamic Sizing [NEW]:** Extrapolates optimal position lot sizes by fetching live Bybit & Gateio available margin and clamping trade deployments down to a percentage scale (e.g. 10% of portfolio size) rather than fixed USDT.
+- **Simultaneous Arbitrage Execution:** Built-in dashboard configuration bounds locking exact Margin, Size, and Leverage profiles routing parallel dual-exchange orders via asyncio.
+- **Modern Institutional UI:** Rebuilt utilizing deep-dark glass aesthetics and background CSS gradients without relying on intense framework bloat. Integrated countdown timers sync seamlessly in Javascript.
 
 ## Project Structure
 

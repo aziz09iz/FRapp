@@ -12,6 +12,10 @@ async def dashboard_page(request: Request):
 async def portfolio_page(request: Request):
     return templates.TemplateResponse(request=request, name="portfolio.html")
 
+@router.get("/history")
+async def history_page(request: Request):
+    return templates.TemplateResponse(request=request, name="history.html")
+
 @router.get("/settings")
 async def settings_page(request: Request):
     return templates.TemplateResponse(request=request, name="settings.html")

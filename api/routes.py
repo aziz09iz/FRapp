@@ -87,12 +87,42 @@ async def get_portfolio():
             
     return {"positions": positions_data}
 
+@router.get("/history")
+async def get_history():
+    from db.models import ActivePosition
+    from db.database import AsyncSessionLocal
+    from sqlalchemy.future import select
+    from sqlalchemy import desc
+    
+    positions_data = []
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(ActivePosition)
+            .where(ActivePosition.active == False)
+            .order_by(desc(ActivePosition.closed_at))
+        )
+        positions = result.scalars().all()
+        for pos in positions:
+            positions_data.append({
+                "symbol": pos.symbol,
+                "long_exchange": pos.long_exchange,
+                "short_exchange": pos.short_exchange,
+                "qty": pos.qty,
+                "entry_long": pos.entry_price_long,
+                "entry_short": pos.entry_price_short,
+                "realized_pnl": pos.realized_pnl,
+                "funding_accrued": pos.funding_accrued,
+                "closed_at": pos.closed_at.isoformat() if pos.closed_at else ""
+            })
+    return {"history": positions_data}
+
 @router.post("/close_position")
 async def api_close_position(data: dict):
     from db.models import ActivePosition
     from db.database import AsyncSessionLocal
     from core.trading import execute_order
     import asyncio
+    from datetime import datetime
     
     pos_id = data.get('id')
     if not pos_id: return {"status": "error"}
@@ -100,6 +130,16 @@ async def api_close_position(data: dict):
     async with AsyncSessionLocal() as session:
         pos = await session.get(ActivePosition, pos_id)
         if pos and pos.active:
+            # calculate realized PnL
+            from core.exchanges import exchange_manager
+            p_long = exchange_manager.get_price(pos.long_exchange, pos.symbol) or pos.entry_price_long
+            p_short = exchange_manager.get_price(pos.short_exchange, pos.symbol) or pos.entry_price_short
+            
+            pnl_long = (p_long - pos.entry_price_long) * pos.qty if pos.entry_price_long else 0
+            pnl_short = (pos.entry_price_short - p_short) * pos.qty if pos.entry_price_short else 0
+            
+            pos.realized_pnl = pnl_long + pnl_short
+            pos.closed_at = datetime.utcnow()
             pos.active = False
             await session.commit()
             
@@ -119,6 +159,10 @@ class SettingsUpdate(BaseModel):
     gate_secret: str
     tg_bot_token: str
     tg_chat_id: str
+    autopilot_enabled: bool
+    autopilot_min_apr: float
+    trade_size_pct: float
+    margin_alert_threshold: float
 
 @router.get("/settings")
 async def api_get_settings():
@@ -128,7 +172,11 @@ async def api_get_settings():
         "gate_api_key": settings.gate_api_key,
         "gate_secret": settings.gate_secret,
         "tg_bot_token": getattr(settings, 'tg_bot_token', ""),
-        "tg_chat_id": getattr(settings, 'tg_chat_id', "")
+        "tg_chat_id": getattr(settings, 'tg_chat_id', ""),
+        "autopilot_enabled": getattr(settings, 'autopilot_enabled', False),
+        "autopilot_min_apr": getattr(settings, 'autopilot_min_apr', 300.0),
+        "trade_size_pct": getattr(settings, 'trade_size_pct', 0.0),
+        "margin_alert_threshold": getattr(settings, 'margin_alert_threshold', 80.0)
     }
 
 @router.post("/settings")

@@ -87,19 +87,42 @@ class TradeRequest(BaseModel):
     margin_mode: str
     long_exchange: str
     short_exchange: str
+    mode: str = "instant"
 
 @router.post("/execute")
 async def execute_trade(data: TradeRequest):
-    from core.trading import process_instant_entry
-    import asyncio
-    asyncio.create_task(
-        process_instant_entry(
-            data.symbol, 
-            data.long_exchange, 
-            data.short_exchange, 
-            data.size_usdt, 
-            data.leverage, 
-            data.margin_mode
+    if data.mode == "instant":
+        from core.trading import process_instant_entry
+        import asyncio
+        asyncio.create_task(
+            process_instant_entry(
+                data.symbol, 
+                data.long_exchange, 
+                data.short_exchange, 
+                data.size_usdt, 
+                data.leverage, 
+                data.margin_mode
+            )
         )
-    )
-    return {"status": "ok", "message": f"Execution triggered for {data.symbol}"}
+        return {"status": "ok", "message": f"Instant Execution triggered for {data.symbol}"}
+    else:
+        from db.models import PendingOrder
+        from db.database import AsyncSessionLocal
+        import asyncio
+        async def save_pending():
+            async with AsyncSessionLocal() as session:
+                po = PendingOrder(
+                    symbol=data.symbol,
+                    target_spread_min=0.0,
+                    long_exchange=data.long_exchange,
+                    short_exchange=data.short_exchange,
+                    qty_usdt=data.size_usdt,
+                    leverage=data.leverage,
+                    margin_mode=data.margin_mode,
+                    active=True
+                )
+                session.add(po)
+                await session.commit()
+                
+        asyncio.create_task(save_pending())
+        return {"status": "ok", "message": f"Delayed execution scheduled for {data.symbol} (Waiting for positive spread)"}

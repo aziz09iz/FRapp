@@ -32,5 +32,8 @@ class PendingOrder(Base):
     target_spread_min = Column(Float)
     long_exchange = Column(String)
     short_exchange = Column(String)
+    qty_usdt = Column(Float, default=100.0)
+    leverage = Column(Integer, default=10)
+    margin_mode = Column(String, default="cross")
     created_at = Column(DateTime, default=datetime.utcnow)
     active = Column(Boolean, default=True)

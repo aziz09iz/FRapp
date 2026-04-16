@@ -101,7 +101,6 @@
                 
                 const spreadText = item.spread !== 0 ? item.spread.toFixed(6) : "0.000000";
                 
-                // Colors based on positive/negative
                 const bColor = item.bybit_fr > 0 ? 'text-green-400' : (item.bybit_fr < 0 ? 'text-red-400' : 'text-gray-300');
                 const gColor = item.gate_fr > 0 ? 'text-green-400' : (item.gate_fr < 0 ? 'text-red-400' : 'text-gray-300');
                 
@@ -116,25 +115,23 @@
                     <td class="p-3 text-purple-300">${item.apr.toFixed(2)}%</td>
                     <td class="p-3 font-mono ${item.spread > 0 ? 'text-green-300' : (item.spread < 0 ? 'text-red-300' : 'text-gray-300')}">${spreadText}</td>
                     <td class="p-3 text-center space-x-2">
-                        <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="enterPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr})">Enter</button>
+                        <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="submitPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr}, 'instant')">Enter</button>
+                        <button class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs transition" onclick="submitPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr}, 'delay')">Delay</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
-            updateCountdowns(); // Call immediately
+            updateCountdowns();
         } catch (e) {
             console.error("Dashboard fetch error", e);
         }
     }
 
-    async function enterPosition(symbol, bybitFr, gateFr) {
+    async function submitPosition(symbol, bybitFr, gateFr, mode) {
         const size = parseFloat(document.getElementById('trade-size').value) || 100;
         const lev = parseInt(document.getElementById('trade-leverage').value) || 10;
         const margin = document.getElementById('trade-margin').value;
         
-        // Logically short the exchange with higher FR paying out, wait...
-        // If FR > 0, long pays short.
-        // Highest FR = best to short (receive most). Lowest FR = best to long (pay least).
         let longEx = "bybit";
         let shortEx = "gateio";
         if (bybitFr > gateFr) {
@@ -152,7 +149,8 @@
                     leverage: lev,
                     margin_mode: margin,
                     long_exchange: longEx,
-                    short_exchange: shortEx
+                    short_exchange: shortEx,
+                    mode: mode
                 })
             });
             const ans = await res.json();

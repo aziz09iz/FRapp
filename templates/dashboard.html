@@ -9,11 +9,30 @@
     </div>
 </div>
 
+<div class="mb-6 p-4 bg-gray-800 rounded-lg flex flex-wrap gap-4 items-end">
+    <div>
+        <label class="block text-xs text-gray-400 mb-1">Trade Size (USDT)</label>
+        <input type="number" id="trade-size" value="100" class="w-32 bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+    </div>
+    <div>
+        <label class="block text-xs text-gray-400 mb-1">Leverage</label>
+        <input type="number" id="trade-leverage" value="10" class="w-24 bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+    </div>
+    <div>
+        <label class="block text-xs text-gray-400 mb-1">Margin Mode</label>
+        <select id="trade-margin" class="w-28 bg-gray-700 text-white px-3 py-2 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="cross">Cross</option>
+            <option value="isolated">Isolated</option>
+        </select>
+    </div>
+</div>
+
 <div class="overflow-x-auto">
     <table class="w-full text-left border-collapse">
         <thead class="bg-gray-800 text-sm">
             <tr>
                 <th class="p-3 border-b border-gray-700">Symbol</th>
+                <th class="p-3 border-b border-gray-700">Next Funding</th>
                 <th class="p-3 border-b border-gray-700">Bybit FR</th>
                 <th class="p-3 border-b border-gray-700">Gate FR</th>
                 <th class="p-3 border-b border-gray-700">Diff</th>
@@ -23,12 +42,41 @@
             </tr>
         </thead>
         <tbody id="table-body" class="text-sm">
-            <tr><td colspan="7" class="p-4 text-center text-gray-500">Loading data...</td></tr>
+            <tr><td colspan="8" class="p-4 text-center text-gray-500">Loading data...</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
+    let fundingTimes = {};
+
+    function updateCountdowns() {
+        const now = new Date().getTime();
+        for (const [symbol, targetMs] of Object.entries(fundingTimes)) {
+            const el = document.getElementById(`countdown-${symbol}`);
+            if (!el) continue;
+            
+            let diff = targetMs - now;
+            if (targetMs <= 0 || diff <= 0) {
+                const d = new Date();
+                const h = d.getUTCHours();
+                const nextH = (Math.floor(h / 8) + 1) * 8;
+                const nextDate = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), nextH, 0, 0));
+                diff = nextDate.getTime() - d.getTime();
+            }
+            
+            if (diff > 0) {
+                const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+                const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+                el.innerText = `${h}:${m}:${s}`;
+            } else {
+                el.innerText = "00:00:00";
+            }
+        }
+    }
+    setInterval(updateCountdowns, 1000);
+
     async function fetchData() {
         try {
             const res = await fetch("/api/dashboard");
@@ -41,10 +89,12 @@
             tbody.innerHTML = "";
             
             if (json.data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" class="p-4 text-center text-gray-500">No data available.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-500">No data available.</td></tr>`;
             }
             
             json.data.forEach(item => {
+                fundingTimes[item.symbol] = item.next_funding_time || 0;
+
                 const bFR = (item.bybit_fr * 100).toFixed(4) + '%';
                 const gFR = (item.gate_fr * 100).toFixed(4) + '%';
                 const diffPerc = (Math.abs(item.bybit_fr - item.gate_fr) * 100).toFixed(4) + '%';
@@ -59,25 +109,59 @@
                 tr.className = "border-b border-gray-800 hover:bg-gray-800 transition-colors";
                 tr.innerHTML = `
                     <td class="p-3 font-bold">${item.symbol}</td>
+                    <td class="p-3 text-gray-400 font-mono" id="countdown-${item.symbol}">--:--:--</td>
                     <td class="p-3 ${bColor}">${bFR}</td>
                     <td class="p-3 ${gColor}">${gFR}</td>
                     <td class="p-3 text-blue-300">${diffPerc}</td>
                     <td class="p-3 text-purple-300">${item.apr.toFixed(2)}%</td>
                     <td class="p-3 font-mono ${item.spread > 0 ? 'text-green-300' : (item.spread < 0 ? 'text-red-300' : 'text-gray-300')}">${spreadText}</td>
                     <td class="p-3 text-center space-x-2">
-                        <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="enterPosition('${item.symbol}')">Enter</button>
-                        <button class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs transition" onclick="delayPosition('${item.symbol}')">Delay</button>
+                        <button class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1 rounded text-xs transition" onclick="enterPosition('${item.symbol}', ${item.bybit_fr}, ${item.gate_fr})">Enter</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+            updateCountdowns(); // Call immediately
         } catch (e) {
             console.error("Dashboard fetch error", e);
         }
     }
 
-    function enterPosition(symbol) { alert("Triggering instant entry for " + symbol); }
-    function delayPosition(symbol) { alert("Triggering delayed entry for " + symbol); }
+    async function enterPosition(symbol, bybitFr, gateFr) {
+        const size = parseFloat(document.getElementById('trade-size').value) || 100;
+        const lev = parseInt(document.getElementById('trade-leverage').value) || 10;
+        const margin = document.getElementById('trade-margin').value;
+        
+        // Logically short the exchange with higher FR paying out, wait...
+        // If FR > 0, long pays short.
+        // Highest FR = best to short (receive most). Lowest FR = best to long (pay least).
+        let longEx = "bybit";
+        let shortEx = "gateio";
+        if (bybitFr > gateFr) {
+            longEx = "gateio";
+            shortEx = "bybit";
+        }
+        
+        try {
+            const res = await fetch("/api/execute", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({
+                    symbol: symbol,
+                    size_usdt: size,
+                    leverage: lev,
+                    margin_mode: margin,
+                    long_exchange: longEx,
+                    short_exchange: shortEx
+                })
+            });
+            const ans = await res.json();
+            alert(ans.message);
+        } catch(e) {
+            alert("Failed to send order.");
+            console.error(e);
+        }
+    }
 
     fetchData();
     setInterval(fetchData, 5000);

@@ -17,6 +17,7 @@ async def get_dashboard():
         pg = exchange_manager.get_price('gateio', symbol) or 0
         fb = exchange_manager.get_funding_rate('bybit', symbol) or 0
         fg = exchange_manager.get_funding_rate('gateio', symbol) or 0
+        nxt = exchange_manager.next_funding_times.get('bybit', {}).get(symbol, 0)
         
         # Only consider symbols where we actually extracted funding rate realistically
         # E.g. avoid clutter if both are exactly 0 in info
@@ -32,6 +33,7 @@ async def get_dashboard():
             "bybit_fr": fb,
             "gate_fr": fg,
             "interval": 8,
+            "next_funding_time": nxt,
             "apr": apr,
             "bybit_price": pb,
             "gate_price": pg,
@@ -77,3 +79,27 @@ async def api_post_settings(data: SettingsUpdate):
     update_env(data.model_dump())
     await exchange_manager.reinit()
     return {"status": "ok", "message": "Settings saved to .env"}
+
+class TradeRequest(BaseModel):
+    symbol: str
+    size_usdt: float
+    leverage: int
+    margin_mode: str
+    long_exchange: str
+    short_exchange: str
+
+@router.post("/execute")
+async def execute_trade(data: TradeRequest):
+    from core.trading import process_instant_entry
+    import asyncio
+    asyncio.create_task(
+        process_instant_entry(
+            data.symbol, 
+            data.long_exchange, 
+            data.short_exchange, 
+            data.size_usdt, 
+            data.leverage, 
+            data.margin_mode
+        )
+    )
+    return {"status": "ok", "message": f"Execution triggered for {data.symbol}"}

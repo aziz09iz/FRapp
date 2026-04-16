@@ -4,9 +4,10 @@ This is a production-oriented web application designed to identify funding rate 
 
 ## Key Features
 - **Top 5 Funding Rates Dashboard:** Powered natively by the public CCXT payloads from Bybit and Gate (polls every 60 seconds to avoid limit bans).
+- **Dynamic Countdown Timer:** Real-time javascript based countdown synced with exchange settlement times.
+- **Simultaneous Arbitrage Execution:** Built-in form to set global Margin, Size and Leverage and execute opposing hedges simultaneously on two exchanges.
 - **Asynchronous Trading Logic:** Real-time dual-exchange REST interactions avoiding strict API limits utilizing one master payload.
 - **Minimal Clean UI:** Designed with HTML/TailwindCSS to reload components in JS natively without heavy JS framework bloats.
-- **Multiple Execution Modes:** Instant vs Delayed execution.
 
 ## Project Structure
 

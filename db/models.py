@@ -17,7 +17,9 @@ class ActivePosition(Base):
     current_spread = Column(Float, default=0.0)
     unrealized_pnl = Column(Float, default=0.0)
     qty = Column(Float, default=0.0)
+    funding_accrued = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
+    active = Column(Boolean, default=True)
 
 class SettingsModel(Base):
     __tablename__ = "settings"

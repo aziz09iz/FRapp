@@ -45,6 +45,7 @@ async def get_dashboard():
 
     return {
         "data": top_5,
+        "balances": exchange_manager.balances,
         "latency": {
             "coinalyze": 0,
             "bybit": exchange_manager.latency.get('bybit', 0),
@@ -54,7 +55,59 @@ async def get_dashboard():
 
 @router.get("/portfolio")
 async def get_portfolio():
-    return {"positions": []}
+    from db.models import ActivePosition
+    from db.database import AsyncSessionLocal
+    from sqlalchemy.future import select
+    
+    positions_data = []
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(ActivePosition).where(ActivePosition.active == True))
+        positions = result.scalars().all()
+        
+        for pos in positions:
+            p_long = exchange_manager.get_price(pos.long_exchange, pos.symbol) or 0.0
+            p_short = exchange_manager.get_price(pos.short_exchange, pos.symbol) or 0.0
+            
+            pnl_long = (p_long - pos.entry_price_long) * pos.qty if pos.entry_price_long else 0
+            pnl_short = (pos.entry_price_short - p_short) * pos.qty if pos.entry_price_short else 0
+            
+            positions_data.append({
+                "id": pos.id,
+                "symbol": pos.symbol,
+                "long_exchange": pos.long_exchange,
+                "short_exchange": pos.short_exchange,
+                "qty": pos.qty,
+                "entry_price_long": pos.entry_price_long,
+                "entry_price_short": pos.entry_price_short,
+                "current_price_long": p_long,
+                "current_price_short": p_short,
+                "u_pnl": pnl_long + pnl_short,
+                "funding_accrued": pos.funding_accrued
+            })
+            
+    return {"positions": positions_data}
+
+@router.post("/close_position")
+async def api_close_position(data: dict):
+    from db.models import ActivePosition
+    from db.database import AsyncSessionLocal
+    from core.trading import execute_order
+    import asyncio
+    
+    pos_id = data.get('id')
+    if not pos_id: return {"status": "error"}
+    
+    async with AsyncSessionLocal() as session:
+        pos = await session.get(ActivePosition, pos_id)
+        if pos and pos.active:
+            pos.active = False
+            await session.commit()
+            
+            # Close logically reverses the sides
+            asyncio.create_task(execute_order(pos.long_exchange, pos.symbol, "sell", amount=pos.qty))
+            asyncio.create_task(execute_order(pos.short_exchange, pos.symbol, "buy", amount=pos.qty))
+            return {"status": "ok", "message": f"Closed {pos.symbol}"}
+    return {"status": "error", "message": "Position not found"}
 
 from pydantic import BaseModel
 from config import update_env, settings
@@ -64,6 +117,8 @@ class SettingsUpdate(BaseModel):
     bybit_secret: str
     gate_api_key: str
     gate_secret: str
+    tg_bot_token: str
+    tg_chat_id: str
 
 @router.get("/settings")
 async def api_get_settings():
@@ -71,7 +126,9 @@ async def api_get_settings():
         "bybit_api_key": settings.bybit_api_key,
         "bybit_secret": settings.bybit_secret,
         "gate_api_key": settings.gate_api_key,
-        "gate_secret": settings.gate_secret
+        "gate_secret": settings.gate_secret,
+        "tg_bot_token": getattr(settings, 'tg_bot_token', ""),
+        "tg_chat_id": getattr(settings, 'tg_chat_id', "")
     }
 
 @router.post("/settings")

@@ -1,8 +1,11 @@
 import asyncio
 import logging
 from core.exchanges import exchange_manager
+from core.exchanges import exchange_manager
 from db.database import AsyncSessionLocal
 from db.models import PendingOrder, ActivePosition
+from core.notify import send_tg_message
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -47,25 +50,57 @@ async def check_pending_orders():
                 
                 if favorable_spread >= order.target_spread_min:
                     logger.info(f"Executing pending order {order.symbol}, spread {favorable_spread} >= {order.target_spread_min}")
-                    order.active = False
-                    await session.commit()
-                    
-                    size = getattr(order, 'qty_usdt', 100.0)
-                    lev = getattr(order, 'leverage', 10)
-                    margin = getattr(order, 'margin_mode', 'cross')
-                    
-                    asyncio.create_task(
-                        process_instant_entry(
-                            symbol=order.symbol,
-                            long_exchange=order.long_exchange,
-                            short_exchange=order.short_exchange,
-                            size_usdt=size,
-                            leverage=lev,
-                            margin_mode=margin
-                        )
+                order.active = False
+                await session.commit()
+                
+                size = getattr(order, 'qty_usdt', 100.0)
+                lev = getattr(order, 'leverage', 10)
+                margin = getattr(order, 'margin_mode', 'cross')
+                
+                asyncio.create_task(
+                    process_instant_entry(
+                        symbol=order.symbol,
+                        long_exchange=order.long_exchange,
+                        short_exchange=order.short_exchange,
+                        size_usdt=size,
+                        leverage=lev,
+                        margin_mode=margin
                     )
+                )
     except Exception as e:
         logger.error(f"Error checking pending orders: {e}")
+
+async def check_active_positions():
+    from sqlalchemy.future import select
+    try:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(ActivePosition).where(ActivePosition.active == True))
+            positions = result.scalars().all()
+            
+            for pos in positions:
+                pb = exchange_manager.get_price('bybit', pos.symbol)
+                pg = exchange_manager.get_price('gateio', pos.symbol)
+                fb = exchange_manager.get_funding_rate('bybit', pos.symbol)
+                fg = exchange_manager.get_funding_rate('gateio', pos.symbol)
+                
+                if not pb or not pg:
+                    continue
+                
+                # Check Auto-Exit APR Logic
+                apr = abs((fb or 0) - (fg or 0)) * 3 * 365 * 100
+                threshold = getattr(settings, 'auto_exit_apr_threshold', 10.0)
+                if apr < threshold:
+                    pos.active = False
+                    await session.commit()
+                    
+                    msg = f"🚨 <b>Auto-Exit Triggered</b> for {pos.symbol}.\nAPR dropped to {apr:.2f}% (Below {threshold}%)."
+                    await send_tg_message(msg)
+                    logger.info(f"Auto exited {pos.symbol}")
+                    # Simulate Close order here
+                    asyncio.create_task(execute_order(pos.long_exchange, pos.symbol, "sell", amount=pos.qty))
+                    asyncio.create_task(execute_order(pos.short_exchange, pos.symbol, "buy", amount=pos.qty))
+    except Exception as e:
+        logger.error(f"Error checking active positions: {e}")
 
 async def process_instant_entry(symbol, long_exchange, short_exchange, size_usdt: float = 100.0, leverage: int = 10, margin_mode: str = "cross"):
     # Mockup of fetching price to convert USDT size to Asset Size
@@ -87,7 +122,11 @@ async def process_instant_entry(symbol, long_exchange, short_exchange, size_usdt
             symbol=symbol,
             long_exchange=long_exchange,
             short_exchange=short_exchange,
-            qty=amount
+            entry_price_long=exchange_manager.get_price(long_exchange, symbol) or 0.0,
+            entry_price_short=exchange_manager.get_price(short_exchange, symbol) or 0.0,
+            qty=amount,
+            active=True
         )
         session.add(pos)
         await session.commit()
+        await send_tg_message(f"✅ <b>Hedge Executed</b>: {symbol}\nLong: {long_exchange}\nShort: {short_exchange}\nSize: {amount} / Lev: {leverage}x")

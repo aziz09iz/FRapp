@@ -4,8 +4,8 @@
 <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-semibold">Top Funding Rates</h2>
     <div class="flex space-x-6 text-sm text-gray-400">
-        <div>Bybit: <span id="lat-bybit" class="text-white font-mono">0</span> ms</div>
-        <div>Gate.io: <span id="lat-gate" class="text-white font-mono">0</span> ms</div>
+        <div><span class="font-bold text-green-400">Bybit Bal:</span> $<span id="bal-bybit" class="text-white font-mono">0.00</span> | Lat: <span id="lat-bybit" class="text-white font-mono">0</span> ms</div>
+        <div><span class="font-bold text-green-400">Gate.io Bal:</span> $<span id="bal-gate" class="text-white font-mono">0.00</span> | Lat: <span id="lat-gate" class="text-white font-mono">0</span> ms</div>
     </div>
 </div>
 
@@ -84,6 +84,8 @@
             
             document.getElementById("lat-bybit").innerText = json.latency.bybit;
             document.getElementById("lat-gate").innerText = json.latency.gateio;
+            document.getElementById("bal-bybit").innerText = (json.balances.bybit || 0).toFixed(2);
+            document.getElementById("bal-gate").innerText = (json.balances.gateio || 0).toFixed(2);
 
             const tbody = document.getElementById("table-body");
             tbody.innerHTML = "";

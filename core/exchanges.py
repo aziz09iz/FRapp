@@ -23,6 +23,7 @@ class ExchangeManager:
         self.last_funding_rates = {'bybit': {}, 'gateio': {}}
         self.next_funding_times = {'bybit': {}, 'gateio': {}}
         self.latency = {'bybit': 0, 'gateio': 0}
+        self.balances = {'bybit': 0.0, 'gateio': 0.0}
 
     def _init_private(self):
         bybit_opts = {'enableRateLimit': False, 'options': {'defaultType': 'swap'}}
@@ -80,6 +81,26 @@ class ExchangeManager:
             fetch_ex(self.bybit_public, 'bybit'),
             fetch_ex(self.gateio_public, 'gateio')
         )
+
+    async def fetch_balances(self):
+        async def fetch_bal(exchange_priv, name):
+            if not exchange_priv:
+                return
+            start = asyncio.get_event_loop().time()
+            try:
+                bal = await exchange_priv.fetch_balance()
+                total_usdt = bal.get('USDT', {}).get('total', 0.0)
+                self.balances[name] = float(total_usdt)
+            except Exception as e:
+                logger.error(f"{name} fetch_balance error: {e}")
+
+        # Fetch balances concurrently for private accounts
+        tasks = []
+        if self.bybit_private: tasks.append(fetch_bal(self.bybit_private, 'bybit'))
+        if self.gateio_private: tasks.append(fetch_bal(self.gateio_private, 'gateio'))
+        
+        if tasks:
+            await asyncio.gather(*tasks)
 
     def get_price(self, exchange_name, symbol_normalized):
         return self.last_prices.get(exchange_name, {}).get(symbol_normalized)

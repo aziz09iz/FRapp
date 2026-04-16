@@ -25,6 +25,17 @@
         <input id="gate-secret" type="password" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Gate.io Secret">
     </div>
 
+    <div class="mb-4 text-gray-500 border-b border-gray-700"></div>
+
+    <div class="mb-4">
+        <label class="block text-sm font-bold mb-2">Telegram Bot Token</label>
+        <input id="tg-token" type="password" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Telegram Bot Token">
+    </div>
+    <div class="mb-6">
+        <label class="block text-sm font-bold mb-2">Telegram Chat ID</label>
+        <input id="tg-chat" type="text" class="w-full p-2 bg-gray-900 border border-gray-600 rounded text-gray-200" placeholder="Enter Telegram Chat ID">
+    </div>
+
     <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded transition">Save Settings</button>
 </form>
 
@@ -37,6 +48,8 @@
             document.getElementById('bybit-secret').value = data.bybit_secret || "";
             document.getElementById('gate-key').value = data.gate_api_key || "";
             document.getElementById('gate-secret').value = data.gate_secret || "";
+            document.getElementById('tg-token').value = data.tg_bot_token || "";
+            document.getElementById('tg-chat').value = data.tg_chat_id || "";
         } catch (e) {
             console.error("Failed to load settings", e);
         }
@@ -48,7 +61,9 @@
             bybit_api_key: document.getElementById('bybit-key').value,
             bybit_secret: document.getElementById('bybit-secret').value,
             gate_api_key: document.getElementById('gate-key').value,
-            gate_secret: document.getElementById('gate-secret').value
+            gate_secret: document.getElementById('gate-secret').value,
+            tg_bot_token: document.getElementById('tg-token').value,
+            tg_chat_id: document.getElementById('tg-chat').value
         };
 
         const alertBox = document.getElementById('alert-msg');

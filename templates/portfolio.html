@@ -2,10 +2,85 @@
 
 {% block content %}
 <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-semibold">Active Positions</h2>
+    <h2 class="text-2xl font-semibold">Active Positions & Portfolio</h2>
 </div>
 
-<div class="bg-gray-800 p-8 text-center rounded text-gray-400 border border-gray-700">
-    <p>No active positions found.</p>
+<div class="overflow-x-auto bg-gray-800 rounded-lg shadow border border-gray-700">
+    <table class="w-full text-left border-collapse">
+        <thead class="bg-gray-900 border-b border-gray-700 text-sm font-medium">
+            <tr>
+                <th class="p-4">Symbol</th>
+                <th class="p-4">Long vs Short Ex.</th>
+                <th class="p-4">Size (Asset)</th>
+                <th class="p-4">Long Entry -> Current</th>
+                <th class="p-4">Short Entry -> Current</th>
+                <th class="p-4">U. PnL</th>
+                <th class="p-4">Funding Accrued</th>
+                <th class="p-4 text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody id="portfolio-body" class="text-sm">
+            <tr><td colspan="8" class="p-6 text-center text-gray-500">Loading portfolio...</td></tr>
+        </tbody>
+    </table>
 </div>
+
+<script>
+    async function fetchPortfolio() {
+        try {
+            const res = await fetch("/api/portfolio");
+            const data = await res.json();
+            const tbody = document.getElementById("portfolio-body");
+            tbody.innerHTML = "";
+            
+            if (data.positions.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-6 text-center text-gray-500">No active positions found.</td></tr>`;
+                return;
+            }
+            
+            data.positions.forEach(p => {
+                 const pnlColor = p.u_pnl >= 0 ? 'text-green-400' : 'text-red-400';
+                 const funColor = p.funding_accrued >= 0 ? 'text-green-400' : 'text-red-400';
+                 
+                 const tr = document.createElement('tr');
+                 tr.className = "border-b border-gray-700 hover:bg-gray-750";
+                 tr.innerHTML = `
+                    <td class="p-4 font-bold">${p.symbol}</td>
+                    <td class="p-4"><span class="text-green-300">${p.long_exchange}</span> vs <span class="text-red-300">${p.short_exchange}</span></td>
+                    <td class="p-4 font-mono">${p.qty}</td>
+                    <td class="p-4 text-gray-400 font-mono">${p.entry_price_long.toFixed(4)} &rarr; ${p.current_price_long.toFixed(4)}</td>
+                    <td class="p-4 text-gray-400 font-mono">${p.entry_price_short.toFixed(4)} &rarr; ${p.current_price_short.toFixed(4)}</td>
+                    <td class="p-4 font-bold font-mono ${pnlColor}">${p.u_pnl >= 0 ? '+' : ''}${p.u_pnl.toFixed(4)}</td>
+                    <td class="p-4 font-bold font-mono ${funColor}">${p.funding_accrued >= 0 ? '+' : ''}${p.funding_accrued.toFixed(4)}</td>
+                    <td class="p-4 text-center">
+                        <button onclick="closePosition(${p.id}, '${p.symbol}')" class="bg-red-600 hover:bg-red-500 text-white font-bold py-1 px-3 rounded text-xs transition shadow">Close Limit</button>
+                    </td>
+                 `;
+                 tbody.appendChild(tr);
+            });
+        } catch (e) {
+            console.error("Portfolio fetch failed", e);
+        }
+    }
+    
+    async function closePosition(id, symbol) {
+        if(!confirm("Are you sure you want to close both hedges for " + symbol + "?")) return;
+        
+        try {
+            const res = await fetch("/api/close_position", {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id: id})
+            });
+            const ans = await res.json();
+            alert(ans.message);
+            fetchPortfolio(); // refresh immediately
+        } catch(e) {
+            alert("Error closing position");
+        }
+    }
+    
+    fetchPortfolio();
+    setInterval(fetchPortfolio, 3500);
+</script>
 {% endblock %}

@@ -5,8 +5,9 @@ import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import settings
+from config import settings
 from core.exchanges import exchange_manager
-from core.trading import check_pending_orders
+from core.trading import check_pending_orders, check_active_positions
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +20,11 @@ class Scheduler:
         while self.running:
             try:
                 await asyncio.gather(
-                    exchange_manager.fetch_prices()
+                    exchange_manager.fetch_prices(),
+                    exchange_manager.fetch_balances()
                 )
                 await check_pending_orders()
+                await check_active_positions()
             except Exception as e:
                 logger.error(f"Scheduler error in main loop: {e}")
             await asyncio.sleep(settings.poll_interval)

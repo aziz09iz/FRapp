@@ -7,8 +7,11 @@ class Settings(BaseSettings):
     bybit_secret: str = ""
     gate_api_key: str = ""
     gate_secret: str = ""
+    tg_bot_token: str = ""
+    tg_chat_id: str = ""
     sqlite_db_url: str = "sqlite+aiosqlite:///./data.sqlite"
     poll_interval: int = 60
+    auto_exit_apr_threshold: float = 10.0
     
     class Config:
         env_file = ".env"
